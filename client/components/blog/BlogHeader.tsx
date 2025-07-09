@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { PenIcon, BookOpenIcon, LogInIcon, LogOutIcon } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { BookOpenIcon, LogOutIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useBlog } from "@/contexts/BlogContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function BlogHeader() {
-  const location = useLocation();
-  const { user, login, logout, isAuthLoading } = useBlog();
+  const { user, logout, isAuthLoading } = useBlog();
 
   const renderAuthButton = () => {
     if (isAuthLoading) {
@@ -39,9 +38,9 @@ export function BlogHeader() {
       );
     }
     return (
-      <Button variant="outline" size="sm" onClick={login}>
-        <LogInIcon className="mr-2 h-4 w-4" />
-        Đăng nhập
+      // Sửa: Chuyển nút đăng nhập thành Link đến trang /login
+      <Button asChild variant="outline" size="sm">
+        <Link to="/login">Đăng nhập</Link>
       </Button>
     );
   };
@@ -58,9 +57,15 @@ export function BlogHeader() {
               Qúi Tiến Library
             </span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-1">
-            {/* ... các nút nav khác giữ nguyên ... */}
-          </nav>
+          {/* Chỉ hiển thị nav nếu đã đăng nhập */}
+          {user && (
+            <nav className="hidden md:flex items-center space-x-1">
+                <Button asChild variant="ghost" size="sm"><Link to="/">Trang chủ</Link></Button>
+                <Button asChild variant="ghost" size="sm"><Link to="/categories">Danh mục</Link></Button>
+                <Button asChild variant="ghost" size="sm"><Link to="/posts">Bài viết</Link></Button>
+                <Button asChild variant="ghost" size="sm"><Link to="/write">Viết bài</Link></Button>
+            </nav>
+          )}
         </div>
         <div className="flex items-center space-x-2">
             {renderAuthButton()}

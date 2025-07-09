@@ -24,12 +24,11 @@ import {
 import { 
   getAuth, 
   onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
+  signInWithEmailAndPassword, // Sửa: Dùng hàm đăng nhập bằng email
   signOut,
   User 
 } from "firebase/auth";
-import { db, auth } from "@/firebaseConfig"; // Sửa lại import, thêm auth
+import { db, auth } from "@/firebaseConfig";
 import Fuse from "fuse.js";
 
 // ... (Các interface Post, UpdateLog, Category giữ nguyên) ...
@@ -46,7 +45,7 @@ export interface Post {
   readTime: string;
   updateLogs: UpdateLog[];
   lastViewedAt?: number;
-  authorId?: string; // Thêm authorId để biết ai là tác giả
+  authorId?: string;
 }
 export interface PostForDisplay extends Omit<Post, 'publishedAt' | 'updatedAt'> {
   publishedAt: string;
@@ -67,17 +66,18 @@ export interface Category {
 }
 
 
-// SỬA LỖI: Cập nhật BlogContextType để thêm thông tin người dùng và hàm đăng nhập
+// Cập nhật BlogContextType
 interface BlogContextType {
   posts: PostForDisplay[];
   categories: Category[];
-  user: User | null; // State để lưu thông tin người dùng đang đăng nhập
-  isAuthLoading: boolean; // State để biết đã kiểm tra xong trạng thái đăng nhập chưa
-  login: () => Promise<void>; // Hàm để đăng nhập
-  logout: () => Promise<void>; // Hàm để đăng xuất
+  user: User | null;
+  isAuthLoading: boolean;
+  // Sửa: Hàm login giờ nhận email và password
+  login: (email: string, password: string) => Promise<void>; 
+  logout: () => Promise<void>;
   createPost: (postData: Omit<Post, "id" | "publishedAt" | "updatedAt" | "views" | "updateLogs">) => Promise<void>;
   updatePost: (id: string, postData: Partial<Omit<Post, 'id'>>) => Promise<void>;
-  deletePost: (id: string, authorId: string) => Promise<void>; // Cần authorId để kiểm tra quyền
+  deletePost: (id: string) => Promise<void>;
   getPost: (id: string) => PostForDisplay | undefined;
   searchPosts: (query: string) => PostForDisplay[];
   getPostsByCategory: (categoryName: string) => PostForDisplay[];
@@ -107,87 +107,80 @@ export function BlogProvider({ children }: { children: React.ReactNode }) {
   const [rawPosts, setRawPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null); // State cho người dùng
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // State cho việc load auth
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // Hook để lắng nghe trạng thái đăng nhập của người dùng
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setIsAuthLoading(false); // Đánh dấu đã kiểm tra xong
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
   // ... (các useEffect để lấy posts và categories giữ nguyên) ...
   useEffect(() => {
-    const postsQuery = query(collection(db, "posts"), orderBy("publishedAt", "desc"));
-    const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
-      const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Post[];
-      setRawPosts(postsData);
-      setIsLoading(false);
-    }, (error) => {
-        console.error("Error fetching posts: ", error);
+    if (user) { // Chỉ lấy dữ liệu nếu đã đăng nhập
+        const postsQuery = query(collection(db, "posts"), orderBy("publishedAt", "desc"));
+        const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
+          const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Post[];
+          setRawPosts(postsData);
+          setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching posts: ", error);
+            setIsLoading(false);
+        });
+        return () => unsubscribe();
+    } else if (!isAuthLoading) {
+        setRawPosts([]);
         setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    }
+  }, [user, isAuthLoading]);
 
   useEffect(() => {
-    const categoriesQuery = query(collection(db, "categories"), orderBy("name"));
-    const unsubscribe = onSnapshot(categoriesQuery, (snapshot) => {
-      const categoriesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Category[];
-      setCategories(categoriesData);
-    }, (error) => {
-        console.error("Error fetching categories: ", error);
-    });
-    return () => unsubscribe();
-  }, []);
-
-
-  // Hàm đăng nhập bằng Google
-  const login = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Lỗi đăng nhập Google:", error);
+    if (user) { // Chỉ lấy dữ liệu nếu đã đăng nhập
+        const categoriesQuery = query(collection(db, "categories"), orderBy("name"));
+        const unsubscribe = onSnapshot(categoriesQuery, (snapshot) => {
+          const categoriesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Category[];
+          setCategories(categoriesData);
+        }, (error) => {
+            console.error("Error fetching categories: ", error);
+        });
+        return () => unsubscribe();
+    } else if (!isAuthLoading) {
+        setCategories([]);
     }
+  }, [user, isAuthLoading]);
+
+  // Sửa: Hàm đăng nhập bằng Email và Password
+  const login = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
   };
 
-  // Hàm đăng xuất
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Lỗi đăng xuất:", error);
-    }
+    await signOut(auth);
   };
 
-  // Sửa lại các hàm để thêm authorId
   const createPost = useCallback(async (postData: Omit<Post, "id" | "publishedAt" | "updatedAt" | "views" | "updateLogs">) => {
     if (!auth.currentUser) throw new Error("Bạn phải đăng nhập để tạo bài viết.");
     const postsCollection = collection(db, "posts");
     const now = Timestamp.now();
-    const newPostData = { 
-        ...postData, 
-        authorId: auth.currentUser.uid, // Gắn ID người dùng vào bài viết
-        publishedAt: now, 
-        updatedAt: now, 
-        views: 0, 
-        updateLogs: [] 
-    };
+    const newPostData = { ...postData, authorId: auth.currentUser.uid, publishedAt: now, updatedAt: now, views: 0, updateLogs: [] };
     await addDoc(postsCollection, newPostData);
     // ... (logic cập nhật category giữ nguyên)
   }, []);
-
-  const deletePost = useCallback(async (id: string, authorId: string) => {
-    if (!auth.currentUser || auth.currentUser.uid !== authorId) {
+  
+  const deletePost = useCallback(async (id: string) => {
+    const postToDelete = rawPosts.find(p => p.id === id);
+    if (!postToDelete) throw new Error("Không tìm thấy bài viết.");
+    if (!auth.currentUser || auth.currentUser.uid !== postToDelete.authorId) {
         throw new Error("Bạn không có quyền xóa bài viết này.");
     }
-    // ... (logic xóa giữ nguyên)
-  }, [rawPosts]);
-
+    const postDocRef = doc(db, "posts", id);
+    await deleteDoc(postDocRef);
+    // ... (logic cập nhật category giữ nguyên)
+  }, [rawPosts, auth.currentUser]);
+  
   // ... (các hàm khác giữ nguyên) ...
   const updatePost = useCallback(async (id: string, postData: Partial<Omit<Post, 'id'>>) => {
     const postDoc = doc(db, "posts", id);
@@ -222,14 +215,16 @@ export function BlogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createCategory = useCallback(async (name: string, description: string) => {
+    if (!auth.currentUser) throw new Error("Bạn phải đăng nhập để tạo danh mục.");
     const categoryId = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
     const existingCategory = categories.find(cat => cat.id === categoryId || cat.name.toLowerCase() === name.toLowerCase());
     if (existingCategory) throw new Error("Danh mục đã tồn tại.");
     const categoryDoc = doc(db, "categories", categoryId);
     await setDoc(categoryDoc, { name: name.trim(), description: description.trim(), postCount: 0 });
-  }, [categories]);
+  }, [categories, auth.currentUser]);
 
   const updateCategory = useCallback(async (id: string, name: string, description: string) => {
+    if (!auth.currentUser) throw new Error("Bạn phải đăng nhập để sửa danh mục.");
     const categoryDoc = doc(db, "categories", id);
     const oldCategoryName = categories.find(c => c.id === id)?.name;
     await updateDoc(categoryDoc, { name, description });
@@ -242,8 +237,7 @@ export function BlogProvider({ children }: { children: React.ReactNode }) {
         });
         await batch.commit();
     }
-  }, [categories]);
-
+  }, [categories, auth.currentUser]);
 
   const value: BlogContextType = {
     posts: rawPosts.map(formatPostForDisplay),
