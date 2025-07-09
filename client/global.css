@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 220 15% 8%;
+    --foreground: 210 20% 88%;
+
+    --card: 220 15% 10%;
+    --card-foreground: 210 20% 88%;
+
+    --popover: 220 15% 12%;
+    --popover-foreground: 210 20% 88%;
+
+    --primary: 142 76% 36%;
+    --primary-foreground: 220 15% 8%;
+
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 210 20% 75%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 220 15% 18%;
+    --accent-foreground: 210 20% 88%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 20% 88%;
+
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 142 76% 36%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 220 15% 10%;
+    --sidebar-foreground: 210 20% 75%;
+    --sidebar-primary: 142 76% 36%;
+    --sidebar-primary-foreground: 220 15% 8%;
+    --sidebar-accent: 220 15% 15%;
+    --sidebar-accent-foreground: 210 20% 88%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 142 76% 36%;
+  }
+
+  .dark {
+    --background: 220 15% 5%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 15% 7%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 15% 9%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 142 76% 42%;
+    --primary-foreground: 220 15% 5%;
+
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 210 20% 80%;
+
+    --muted: 220 15% 12%;
+    --muted-foreground: 215 15% 60%;
+
+    --accent: 220 15% 15%;
+    --accent-foreground: 210 20% 92%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 210 20% 92%;
+
+    --border: 220 15% 15%;
+    --input: 220 15% 15%;
+    --ring: 142 76% 42%;
+    --sidebar-background: 220 15% 7%;
+    --sidebar-foreground: 210 20% 80%;
+    --sidebar-primary: 142 76% 42%;
+    --sidebar-primary-foreground: 220 15% 5%;
+    --sidebar-accent: 220 15% 12%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 220 15% 15%;
+    --sidebar-ring: 142 76% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif; /* Thêm dòng này */
+  }
+
+  /* Rich content styles */
+  .rich-content {
+    @apply prose prose-lg prose-neutral dark:prose-invert max-w-none;
+  }
+
+  .rich-content p {
+    @apply mb-4 leading-relaxed text-foreground;
+  }
+
+  .rich-content h1 {
+    @apply text-3xl font-bold mb-6 mt-8 text-foreground;
+  }
+
+  .rich-content h2 {
+    @apply text-2xl font-semibold mb-4 mt-6 text-foreground;
+  }
+
+  .rich-content h3 {
+    @apply text-xl font-medium mb-3 mt-5 text-foreground;
+  }
+
+  .rich-content h4 {
+    @apply text-lg font-medium mb-2 mt-4 text-foreground;
+  }
+
+  .rich-content h5 {
+    @apply text-base font-medium mb-2 mt-3 text-foreground;
+  }
+
+  .rich-content h6 {
+    @apply text-sm font-medium mb-2 mt-3 text-foreground;
+  }
+
+  .rich-content ul,
+  .rich-content ol {
+    @apply my-4 pl-6 text-foreground;
+  }
+
+  .rich-content li {
+    @apply mb-2 text-foreground;
+  }
+
+  .rich-content strong {
+    @apply font-bold text-foreground;
+  }
+
+  .rich-content em {
+    @apply italic text-foreground;
+  }
+
+  /* Table styles - reset unwanted formatting */
+  .rich-content table {
+    @apply border-collapse border-spacing-0 border border-border w-full my-4 not-italic font-normal;
+  }
+
+  .rich-content table th,
+  .rich-content table td {
+    @apply border border-border px-3 py-2 text-left not-italic font-normal;
+  }
+
+  .rich-content table th {
+    @apply bg-muted font-semibold;
+  }
+
+  .rich-content table tr:nth-child(even) {
+    @apply bg-muted/30;
+  }
+
+  /* Ensure only explicit em tags are italic, not inherited */
+  .rich-content table * {
+    @apply not-italic font-normal;
+  }
+
+  .rich-content table em {
+    @apply italic;
+  }
+
+  .rich-content table strong {
+    @apply font-bold;
+  }
+
+  .rich-content a {
+    @apply text-primary underline hover:text-primary/80;
+  }
+
+  .rich-content table {
+    @apply w-full border-collapse border border-border my-4;
+  }
+
+  .rich-content th,
+  .rich-content td {
+    @apply border border-border px-4 py-2 text-foreground not-italic font-normal;
+  }
+
+  .rich-content th {
+    @apply bg-muted font-semibold;
+  }
+
+  .rich-content img {
+    @apply max-w-full h-auto my-4 rounded-lg;
+  }
+
+  .rich-content pre {
+    @apply bg-muted p-4 rounded-lg overflow-x-auto my-4;
+  }
+
+  .rich-content code {
+    @apply bg-muted px-2 py-1 rounded text-sm text-foreground;
+  }
+
+  .rich-content blockquote {
+    @apply border-l-4 border-primary pl-4 italic text-muted-foreground my-4;
+  }
+
+  /* TipTap Editor specific styles */
+  .ProseMirror {
+    @apply focus:outline-none;
+  }
+
+  .ProseMirror p.is-editor-empty:first-child::before {
+    @apply text-muted-foreground pointer-events-none float-left h-0;
+    content: attr(data-placeholder);
+  }
+
+  .ProseMirror h1,
+  .ProseMirror h2,
+  .ProseMirror h3 {
+    @apply text-foreground;
+  }
+
+  .ProseMirror strong {
+    @apply text-foreground font-bold;
+  }
+
+  .ProseMirror em {
+    @apply text-foreground italic;
+  }
+
+  .ProseMirror ul,
+  .ProseMirror ol {
+    @apply text-foreground;
+  }
+
+  .ProseMirror table {
+    @apply border-collapse border border-border;
+  }
+
+  .ProseMirror td,
+  .ProseMirror th {
+    @apply border border-border px-3 py-2 min-w-[100px] not-italic font-normal;
+  }
+
+  .ProseMirror th {
+    @apply bg-muted font-semibold not-italic;
+  }
+
+  /* Specific table content reset */
+  .rich-content table,
+  .rich-content table * {
+    @apply not-italic;
+  }
+
+  .rich-content table em {
+    @apply italic; /* Only em tags should be italic */
+  }
+
+  .ProseMirror table,
+  .ProseMirror table * {
+    @apply not-italic;
+  }
+
+  .ProseMirror table em {
+    @apply italic; /* Only em tags should be italic */
+  }
+}
