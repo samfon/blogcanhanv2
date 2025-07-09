@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  ReactNode,
 } from "react";
 import {
   collection,
@@ -21,17 +22,17 @@ import {
   writeBatch,
   setDoc,
 } from "firebase/firestore";
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, // Sửa: Dùng hàm đăng nhập bằng email
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
   signOut,
-  User 
+  User,
 } from "firebase/auth";
 import { db, auth } from "@/firebaseConfig";
 import Fuse from "fuse.js";
 
-// ... (Các interface Post, UpdateLog, Category giữ nguyên) ...
+// Định nghĩa các Interfaces (Kiểu dữ liệu)
 export interface Post {
   id: string;
   title: string;
@@ -47,10 +48,12 @@ export interface Post {
   lastViewedAt?: number;
   authorId?: string;
 }
+
 export interface PostForDisplay extends Omit<Post, 'publishedAt' | 'updatedAt'> {
   publishedAt: string;
   updatedAt: string;
 }
+
 export interface UpdateLog {
   id: string;
   date: string;
@@ -58,6 +61,7 @@ export interface UpdateLog {
   changes: string[];
   note?: string;
 }
+
 export interface Category {
   id: string;
   name: string;
@@ -65,15 +69,13 @@ export interface Category {
   postCount: number;
 }
 
-
-// Cập nhật BlogContextType
+// Định nghĩa kiểu dữ liệu cho Context
 interface BlogContextType {
   posts: PostForDisplay[];
   categories: Category[];
   user: User | null;
-  isAuthLoading: boolean;
-  // Sửa: Hàm login giờ nhận email và password
-  login: (email: string, password: string) => Promise<void>; 
+  isAuthLoading: boolean; // <-- State quan trọng để kiểm tra xác thực
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   createPost: (postData: Omit<Post, "id" | "publishedAt" | "updatedAt" | "views" | "updateLogs">) => Promise<void>;
   updatePost: (id: string, postData: Partial<Omit<Post, 'id'>>) => Promise<void>;
@@ -84,7 +86,7 @@ interface BlogContextType {
   incrementViews: (id: string) => Promise<void>;
   updateCategory: (id: string, name: string, description: string) => Promise<void>;
   createCategory: (name: string, description: string) => Promise<void>;
-  isLoading: boolean;
+  isLoading: boolean; // State loading cho dữ liệu (posts, categories)
 }
 
 const BlogContext = createContext<BlogContextType | undefined>(undefined);
@@ -97,6 +99,7 @@ export function useBlog() {
   return context;
 }
 
+// Hàm format lại dữ liệu Post để hiển thị cho đẹp
 const formatPostForDisplay = (post: Post): PostForDisplay => ({
   ...post,
   publishedAt: post.publishedAt ? new Date(post.publishedAt.seconds * 1000).toLocaleDateString("vi-VN") : "",
@@ -108,51 +111,58 @@ export function BlogProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  
+  // --- LOGIC CỐT LÕI NẰM Ở ĐÂY ---
+  // 1. State `isAuthLoading` bắt đầu là `true`. App sẽ ở trạng thái chờ.
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
+    // 2. `onAuthStateChanged` lắng nghe trạng thái đăng nhập từ Firebase.
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      setUser(currentUser); // Cập nhật user
+      // 3. Sau khi có kết quả (dù đăng nhập hay chưa), set `isAuthLoading` thành `false`.
+      // Lúc này App mới bắt đầu render giao diện chính hoặc trang Login.
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // ... (các useEffect để lấy posts và categories giữ nguyên) ...
+  // Lấy dữ liệu posts, chỉ chạy khi user đã được xác thực
   useEffect(() => {
-    if (user) { // Chỉ lấy dữ liệu nếu đã đăng nhập
-        const postsQuery = query(collection(db, "posts"), orderBy("publishedAt", "desc"));
-        const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
-          const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Post[];
-          setRawPosts(postsData);
-          setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching posts: ", error);
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    } else if (!isAuthLoading) {
-        setRawPosts([]);
+    if (user) {
+      const postsQuery = query(collection(db, "posts"), orderBy("publishedAt", "desc"));
+      const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
+        const postsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Post[];
+        setRawPosts(postsData);
         setIsLoading(false);
+      }, (error) => {
+        console.error("Error fetching posts: ", error);
+        setIsLoading(false);
+      });
+      return () => unsubscribe();
+    } else if (!isAuthLoading) { // Nếu không có user và đã xác thực xong
+      setRawPosts([]);
+      setIsLoading(false);
     }
   }, [user, isAuthLoading]);
 
+  // Lấy dữ liệu categories, chỉ chạy khi user đã được xác thực
   useEffect(() => {
-    if (user) { // Chỉ lấy dữ liệu nếu đã đăng nhập
-        const categoriesQuery = query(collection(db, "categories"), orderBy("name"));
-        const unsubscribe = onSnapshot(categoriesQuery, (snapshot) => {
-          const categoriesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Category[];
-          setCategories(categoriesData);
-        }, (error) => {
-            console.error("Error fetching categories: ", error);
-        });
-        return () => unsubscribe();
+    if (user) {
+      const categoriesQuery = query(collection(db, "categories"), orderBy("name"));
+      const unsubscribe = onSnapshot(categoriesQuery, (snapshot) => {
+        const categoriesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Category[];
+        setCategories(categoriesData);
+      }, (error) => {
+        console.error("Error fetching categories: ", error);
+      });
+      return () => unsubscribe();
     } else if (!isAuthLoading) {
-        setCategories([]);
+      setCategories([]);
     }
   }, [user, isAuthLoading]);
 
-  // Sửa: Hàm đăng nhập bằng Email và Password
+  // Các hàm chức năng của mày (giữ nguyên)
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
@@ -167,7 +177,7 @@ export function BlogProvider({ children }: { children: React.ReactNode }) {
     const now = Timestamp.now();
     const newPostData = { ...postData, authorId: auth.currentUser.uid, publishedAt: now, updatedAt: now, views: 0, updateLogs: [] };
     await addDoc(postsCollection, newPostData);
-    // ... (logic cập nhật category giữ nguyên)
+    // TODO: Cập nhật postCount cho category
   }, []);
   
   const deletePost = useCallback(async (id: string) => {
@@ -178,10 +188,9 @@ export function BlogProvider({ children }: { children: React.ReactNode }) {
     }
     const postDocRef = doc(db, "posts", id);
     await deleteDoc(postDocRef);
-    // ... (logic cập nhật category giữ nguyên)
+    // TODO: Cập nhật postCount cho category
   }, [rawPosts, auth.currentUser]);
   
-  // ... (các hàm khác giữ nguyên) ...
   const updatePost = useCallback(async (id: string, postData: Partial<Omit<Post, 'id'>>) => {
     const postDoc = doc(db, "posts", id);
     await updateDoc(postDoc, { ...postData, updatedAt: Timestamp.now() });
