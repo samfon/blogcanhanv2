@@ -50,7 +50,13 @@ export default function Write() {
           category: post.category,
           tags: post.tags.join(", "),
           notes: post.updateLogs[0]?.note || "",
-          status: post.status,
+          _status: post.status,
+          get status() {
+            return this._status;
+          },
+          set status(value) {
+            this._status = value;
+          },
         });
       }
     }
@@ -189,14 +195,14 @@ export default function Write() {
 
   const handleAddNewCategory = () => {
     if (newCategoryName.trim()) {
-      const categoryName = newCategoryName.trim();
+      const categoryName = categoryName.trim();
 
       // Add to categories if not exists
       const categoryExists = categories.some(
         (cat) => cat.name.toLowerCase() === categoryName.toLowerCase(),
       );
 
-      if (!categoryExists && setCategories) {
+      if (!categoryExists && categories) {
         const newCategory = {
           id: categoryName.toLowerCase().replace(/\s+/g, "-"),
           name: categoryName,
@@ -205,11 +211,11 @@ export default function Write() {
           recentPosts: [],
         };
 
-        setCategories((prev) => [...prev, newCategory]);
+        categories((prev) => [...prev, newCategory]);
       }
 
       setFormData((prev) => ({ ...prev, category: categoryName }));
-      setNewCategoryName("");
+      categoryName("");
       setShowNewCategoryInput(false);
       toast({
         title: "Thành công",
@@ -357,3 +363,7 @@ export default function Write() {
     </div>
   );
 }
+function setShowNewCategoryInput(arg0: boolean) {
+  throw new Error("Function not implemented.");
+}
+
